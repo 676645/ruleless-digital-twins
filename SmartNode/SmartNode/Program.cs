@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using SmartNode.Streaming;
 using System.CommandLine;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -18,6 +19,8 @@ namespace SmartNode
 {
     internal class Program
     {
+        public static FilepathArguments? FilepathArguments;
+
         static async Task<int> Main(string[] args)
         {
             RootCommand rootCommand = new();
@@ -32,9 +35,17 @@ namespace SmartNode
             };
             rootCommand.Add(baseDirName);
 
+            Argument<string> inferredModelArg = new Argument<string>("inferred-model")
+            {
+                Description = "The path to the inferred model file.",
+                Arity = ArgumentArity.ZeroOrOne
+            };
+            rootCommand.Add(inferredModelArg);
+
             ParseResult parseResult = rootCommand.Parse(args);
             string? settingsFile = parseResult.GetValue(fileNameArg);
             string? baseDir = parseResult.GetValue(baseDirName);
+            string? positionalInferredModel = parseResult.GetValue(inferredModelArg);
 
             var appSettings = settingsFile is not null ? Path.Combine("Properties", settingsFile) : Path.Combine("Properties", $"appsettings.json");
 
@@ -44,14 +55,21 @@ namespace SmartNode
             var filepathArguments = builder.Configuration.GetSection("FilepathArguments").Get<FilepathArguments>();
             var coordinatorSettings = builder.Configuration.GetSection("CoordinatorSettings").Get<CoordinatorSettings>();
             var databaseSettings = builder.Configuration.GetSection("DatabaseSettings").Get<DatabaseSettings>();
+            var streamingOptions = builder.Configuration.GetSection("StreamingWebSocket").Get<StreamingWebSocketOptions>() ?? new StreamingWebSocketOptions();
 
             string? rootDirectory;
             try {
                 var location = Directory.GetParent(Assembly.GetExecutingAssembly().Location);
-                // Dispatch between binary release (e.g. in Docker) and in-IDE/workspace.
-                rootDirectory = baseDir ?? location!.Parent!.Parent!.Parent!.Parent!.Parent!.FullName;
-            } catch (NullReferenceException) {
-                rootDirectory = ""; // Not the most elegant solution, but it'll do.
+                if (baseDir != null) {
+                    rootDirectory = baseDir;
+                } else if (Directory.Exists("/app")) {
+                    rootDirectory = "/app"; // Standard Docker path
+                } else {
+                    // Dev environment: climb out of bin/Debug/net8.0
+                    rootDirectory = location?.Parent?.Parent?.Parent?.Parent?.Parent?.FullName ?? Directory.GetCurrentDirectory();
+                }
+            } catch {
+                rootDirectory = Directory.GetCurrentDirectory();
             }
 
             // TODO: we can use reflection for this.
@@ -64,6 +82,18 @@ namespace SmartNode
             filepathArguments.InferredModelFilepath = Path.GetFullPath(Path.Combine(rootDirectory, filepathArguments.InferredModelFilepath));
             filepathArguments.InferenceEngineFilepath = Path.GetFullPath(Path.Combine(rootDirectory, filepathArguments.InferenceEngineFilepath));
 
+            // In Docker, FMUs are moved to /app by the Dockerfile.
+            if (Directory.Exists("/app") && File.Exists("/app/roomM370.fmu")) {
+                filepathArguments.FmuDirectory = "/app";
+            }
+
+            FilepathArguments = filepathArguments;
+
+            // Override with positional argument if provided (matches Docker example)
+            if (!string.IsNullOrEmpty(positionalInferredModel)) {
+                filepathArguments.InferredModelFilepath = positionalInferredModel;
+            }
+
             // Register services here.
             builder.Services.AddLogging(loggingBuilder =>
             {
@@ -72,6 +102,7 @@ namespace SmartNode
             builder.Services.AddSingleton(filepathArguments);
             builder.Services.AddSingleton(coordinatorSettings!);
             builder.Services.AddSingleton(databaseSettings!);
+            builder.Services.AddSingleton(streamingOptions);
             // Register a factory to allow for dynamic constructor argument passing through DI.
             builder.Services.AddSingleton<IMongoClient, MongoClient>(serviceProvider => new MongoClient(databaseSettings!.ConnectionString));
             builder.Services.AddSingleton<ICaseRepository, CaseRepository>(serviceProvider => new CaseRepository(serviceProvider));
@@ -79,7 +110,10 @@ namespace SmartNode
             builder.Services.AddSingleton<IMapekMonitor, MapekMonitor>(serviceProvider => new MapekMonitor(serviceProvider));
 
             // @DAT191 Streaming-server goes >HERE<
-            builder.Services.AddSingleton<IStreamingSimulationProvider, NullStreamingSimulationProvider>(serviceProvider => new NullStreamingSimulationProvider());
+            builder.Services.AddSingleton<WebSocketStreamingSimulationProvider>();
+            builder.Services.AddSingleton<IStreamingSimulationProvider>(serviceProvider => serviceProvider.GetRequiredService<WebSocketStreamingSimulationProvider>());
+            builder.Services.AddSingleton<IStreamingTelemetryHub>(serviceProvider => serviceProvider.GetRequiredService<WebSocketStreamingSimulationProvider>());
+            builder.Services.AddHostedService<StreamingWebSocketServer>();
             
             builder.Services.AddSingleton<IMapekPlan, MapekPlan>(serviceProvider => {
                 return coordinatorSettings!.UseEuclid ? new EuclidMapekPlan(serviceProvider) : new MapekPlan(serviceProvider);
@@ -92,6 +126,7 @@ namespace SmartNode
             using var host = builder.Build();
 
             var logger = host.Services.GetRequiredService<ILogger<Program>>();
+            await host.StartAsync();
 
             // Get an instance of the MAPE-K manager.
             var mapekManager = host.Services.GetRequiredService<IMapekManager>();
@@ -99,13 +134,16 @@ namespace SmartNode
             // Start the loop.
             try
             {
-                // Fire and forget.
                 await mapekManager.StartLoop();
             }
             catch (Exception exception)
             {
                 logger.LogCritical(exception, "Exception");
                 throw;
+            }
+            finally
+            {
+                await host.StopAsync();
             }
 
             // XXX review

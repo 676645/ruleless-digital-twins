@@ -24,7 +24,10 @@
     <None Update="Properties\appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-        <None Update="Properties\appsettings-incubator.json">
+    <None Update="Properties\appsettings-incubator.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Properties\appsettings-dat191.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

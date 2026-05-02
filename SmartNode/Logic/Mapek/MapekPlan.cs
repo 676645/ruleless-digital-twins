@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using static Femyou.IModel;
 
 namespace Logic.Mapek
@@ -301,8 +302,10 @@ namespace Logic.Mapek
 
         protected virtual void InferActionCombinations() {
             // Execute the inference engine as an external process.
+            // Use full path for Java on Linux/WSL, otherwise rely on PATH
+            var javaPath = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "/usr/bin/java" : "java";
             var processInfo = new ProcessStartInfo {
-                FileName = "java", // Assumes JAVA is registered in the PATH environment variable (or equivalent).
+                FileName = javaPath,
                 Arguments = $"-jar \"{_filepathArguments.InferenceEngineFilepath}\" " +
                     $"\"{_filepathArguments.OntologyFilepath}\" " +
                     $"\"{_filepathArguments.InstanceModelFilepath}\" " +

@@ -4,6 +4,18 @@
     "context": "../SmartNode"
     },
     "privileged": true,
+    "forwardPorts": [
+        8765
+    ],
+    "remoteEnv": {
+        "LD_PRELOAD": ""
+    },
+    "portsAttributes": {
+        "8765": {
+            "label": "SmartNode WebSocket",
+            "onAutoForward": "notify"
+        }
+    },
     "mounts": [
         "type=volume,src=rdt-arm,dst=/opt/arm64"
     ],

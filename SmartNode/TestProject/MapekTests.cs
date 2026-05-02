@@ -3,6 +3,7 @@ using Implementations.Sensors.Fakepool;
 using Logic.CaseRepository;
 using Logic.FactoryInterface;
 using Logic.Mapek;
+using SmartNode.Streaming;
 using Logic.Models.DatabaseModels;
 using Logic.Models.MapekModels;
 using MongoDB.Driver;
@@ -26,8 +27,11 @@ namespace TestProject
         {
             // Arrange
             IRDTServiceProvider serviceProvider = nullLogger ? new NullServiceProviderMock() : new ServiceProviderMock();
-            // @DAT191 Override this for testing eg. serialisation.
-            serviceProvider.Add(typeof(IStreamingSimulationProvider), new NullStreamingSimulationProvider());
+            
+            // @DAT191: To see the tree in the frontend using WebSocket  
+            var streamingProvider = new WebSocketStreamingSimulationProvider(new Microsoft.Extensions.Options.OptionsWrapper<StreamingWebSocketOptions>(new StreamingWebSocketOptions()));
+            serviceProvider.Add(typeof(IStreamingSimulationProvider), streamingProvider);
+            serviceProvider.Add(typeof(IStreamingTelemetryHub), streamingProvider);
 
             var rootDirectory = Directory.GetParent(Assembly.GetExecutingAssembly().Location)!.Parent!.Parent!.Parent!.Parent!.Parent!.FullName;
             var filepathArguments = new FilepathArguments

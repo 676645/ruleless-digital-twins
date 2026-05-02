@@ -31,6 +31,9 @@ namespace Implementations.Sensors.Fakepool {
             var config = new CsvConfiguration(CultureInfo.InvariantCulture) {
                 NewLine = Environment.NewLine,
                 Delimiter = "\t",
+                MissingFieldFound = null, // ignore missing fields instead of throwing
+                // PrepareHeaderForMatch uses PrepareHeaderForMatchArgs in this CsvHelper version
+                PrepareHeaderForMatch = args => args.Header.Trim('\uFEFF', '\"', ' ', '\r', '\n')
             };
             var rootDirectory = Directory.GetParent(Assembly.GetExecutingAssembly().Location)!.FullName;
             var path = Path.Combine(rootDirectory, "Sensors", "Fakepool", "fakepool.tsv");
