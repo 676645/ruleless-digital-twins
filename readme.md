@@ -1,3 +1,91 @@
+# SmartNode FMU Project
+
+## Overview
+
+This project contains Functional Mock-up Units (FMUs) for the SmartNode implementation, including NordPool, Fakepool, and Yr-Weather integrations.
+
+## Prerequisites
+
+### Windows Setup
+
+- **Windows Subsystem for Linux (WSL)** is required
+- Ensure WSL is installed and configured on your system
+- .NET 8.0 in WSL
+
+.NET 8.0 can be installed in WSL using the following commands:
+
+```bash
+sudo apt update
+sudo apt install -y dotnet-sdk-8.0
+```
+
+## Building FMUs on Windows
+
+If the VS Code **Run Task -> Build all Python FMUs** and **(Re)Build all OMC FMUs** fail, follow the manual setup steps below.
+
+### Step 1: NordPool FMU
+
+Navigate to the NordPool-FMU directory and set up the Python environment:
+
+```bash
+# Example path: cd /mnt/c/Users/<windows_username>/ruleless-digital-twins/SmartNode/Implementations/FMUs/Nordpool-FMU
+
+cd /mnt/<filepath>/<project_name>/SmartNode/Implementations/FMUs/Nordpool-FMU
+
+sudo apt update
+sudo apt install -y python3-venv python3-pip
+
+python3 -m venv .venv
+source .venv/bin/activate
+
+python -m pip install --upgrade pip
+python -m pip install pythonfmu requests requests_cache pandas
+pythonfmu --version
+
+make clean all
+cp NordPool.fmu ..
+```
+### Step 2: Fakepool FMU
+
+```bash
+cd ../Fakepool-FMU
+source ../Nordpool-FMU/.venv/bin/activate
+
+pip install -r requirements.txt
+make clean all
+cp Fakepool.fmu ..
+```
+### Step 3: Yr-Weather FMU
+
+```bash
+cd ../Yr-Weather-FMU
+source ../Nordpool-FMU/.venv/bin/activate
+
+pip install -r requirements.txt
+make clean all
+cp YrWeather.fmu ..
+```
+
+## Running locally on Windows
+To run the SmartNode control loop coordinator locally on Windows, ensure you have .NET 8 installed and configured in WSL. Then, navigate to the `SmartNode/SmartNode` and execute the following command:
+
+```bash 
+dotnet run 
+```
+
+### In case of Java error in WSL you can try the following workaround:
+```bash
+sudo apt update
+sudo apt install default-jre-headless
+```
+
+## Connect frontend to backend
+After running the control loop coordinator as described above, you can connect the frontend by launching the website using `npx serve .` in the website directory [(separate GitHub project)](https://github.com/676645/iot-tree-visualization) and then opening settings and clicking on `connect`. Make sure the coordinator is running before clicking `connect`.
+
+
+---
+## Below is the original README content, which is still relevant and will be updated with more details soon.
+
 ## Introduction
 This is the accompanying artifact to the Spajić and Stolz 2025 DataMod paper ([preprint as PDF](http://foldr.org/selabhvl/2025/2025-datamod-preprint.pdf)). It consists of an ontology, instance models, an inference engine JAR and source code, inference (and verification) rules, control loop (logic) codebase, and a simulation model (FMU) and its source code.
 
