@@ -72,6 +72,7 @@ To run the SmartNode control loop coordinator locally on Windows, ensure you hav
 ```bash 
 dotnet run 
 ```
+⚠️ Note that it will use `smartnode/smartnode/Properties/appsettings.json` as the configuration file, so make sure to update any changeable settings in that file as needed before running the command.
 
 ### In case of Java error in WSL you can try the following workaround:
 ```bash
