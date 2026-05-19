@@ -10,11 +10,13 @@ namespace Logic.Mapek
     {
         private readonly ILogger<IMapekExecute> _logger;
         private readonly IFactory _factory;
+        private readonly IStreamingSimulationProvider _streamingProvider;
 
         public MapekExecute(IServiceProvider serviceProvider)
         {
             _logger = serviceProvider.GetRequiredService<ILogger<IMapekExecute>>();
             _factory = serviceProvider.GetRequiredService<IFactory>();
+            _streamingProvider = serviceProvider.GetService<IStreamingSimulationProvider>() ?? new NullStreamingSimulationProvider();
         }
 
         public async Task Execute(Simulation simulation, double mapekExecutionDurationSeconds = 0)
@@ -22,6 +24,10 @@ namespace Logic.Mapek
             _logger.LogInformation("Starting the Execute phase.");
 
             if (simulation is null || !simulation.Actions.Any()) {
+                if (simulation is not null) {
+                    _streamingProvider.Executed(simulation);
+                }
+
                 // Workaround for a virtual dummy environment execution. Supports only ActuationActions.
                 // Actuate anyway to simulate the TT staying in its current state.
                 if (mapekExecutionDurationSeconds > 0) {
@@ -41,6 +47,7 @@ namespace Logic.Mapek
             }
 
             LogExpectedPropertyValues(simulation);
+            _streamingProvider.Executed(simulation);
 
             // Workaround for a virtual dummy environment execution. Supports only ActuationActions.
             if (mapekExecutionDurationSeconds > 0) {

@@ -23,7 +23,7 @@ public sealed class StreamingSimulationEvent
 public sealed class RuntimeSimulationNode
 {
     public required string SimulationId { get; init; }
-    public string? ParentSimulationId { get; init; }
+    public string? ParentSimulationId { get; set; }
     public string RuntimeStatus { get; set; } = "queued";
     public int Index { get; set; } = -1;
     public IReadOnlyDictionary<string, object?> Properties { get; set; } = new Dictionary<string, object?>();

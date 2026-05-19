@@ -16,6 +16,16 @@ public sealed class WebSocketStreamingSimulationProvider : IStreamingSimulationP
 
     private readonly ConcurrentDictionary<Simulation, string> _simulationIds = new(ReferenceEqualityComparer.Instance);
     private readonly ConcurrentDictionary<string, RuntimeSimulationNode> _snapshotNodes = new();
+    private string? _lastExecutedSimulationId;
+    private IReadOnlyDictionary<string, object?> _lastExecutedEdgeSettings = new Dictionary<string, object?>();
+
+    public WebSocketStreamingSimulationProvider()
+    {
+    }
+
+    public WebSocketStreamingSimulationProvider(Microsoft.Extensions.Options.IOptions<StreamingWebSocketOptions> _)
+    {
+    }
 
     public IAsyncEnumerable<StreamingSimulationEvent> ReadEvents(CancellationToken cancellationToken)
     {
@@ -43,6 +53,8 @@ public sealed class WebSocketStreamingSimulationProvider : IStreamingSimulationP
     public void ResetSnapshot()
     {
         _snapshotNodes.Clear();
+        _lastExecutedSimulationId = null;
+        _lastExecutedEdgeSettings = new Dictionary<string, object?>();
     }
 
     public void Queue(Simulation parent, Simulation simulation)
@@ -149,28 +161,43 @@ public sealed class WebSocketStreamingSimulationProvider : IStreamingSimulationP
         });
     }
 
+    public void Executed(Simulation simulation)
+    {
+        var simulationId = EnsureSimulationId(simulation);
+        _lastExecutedSimulationId = simulationId;
+        _lastExecutedEdgeSettings = StreamingSimulationProjection.BuildEdgeProjection(simulation);
+    }
+
     public void Reset(Simulation parent)
     {
         var simulationId = EnsureSimulationId(parent);
         var properties = StreamingSimulationProjection.BuildPropertyProjection(parent);
         var edgeSettings = StreamingSimulationProjection.BuildEdgeProjection(parent);
+        var parentId = parent.Index == -1 ? _lastExecutedSimulationId : null;
+        var effectiveEdgeSettings =
+            parent.Index == -1 && _lastExecutedEdgeSettings.Count > 0
+                ? _lastExecutedEdgeSettings
+                : edgeSettings;
 
         _snapshotNodes.AddOrUpdate(simulationId,
             _ => new RuntimeSimulationNode
             {
                 SimulationId = simulationId,
-                ParentSimulationId = null,
+                ParentSimulationId = parentId,
                 RuntimeStatus = "restarted",
                 Index = parent.Index,
                 Properties = properties,
-                EdgeSettings = edgeSettings
+                EdgeSettings = effectiveEdgeSettings
             },
             (_, existing) =>
             {
+                if (parentId is not null) {
+                    existing.ParentSimulationId = parentId;
+                }
                 existing.RuntimeStatus = "restarted";
                 existing.Index = parent.Index;
                 existing.Properties = properties;
-                existing.EdgeSettings = edgeSettings;
+                existing.EdgeSettings = effectiveEdgeSettings;
                 return existing;
             });
 
@@ -182,8 +209,13 @@ public sealed class WebSocketStreamingSimulationProvider : IStreamingSimulationP
             RuntimeStatus = "restarted",
             Index = parent.Index,
             Properties = properties,
-            EdgeSettings = edgeSettings
+            EdgeSettings = effectiveEdgeSettings
         });
+
+        if (parent.Index == -1) {
+            _lastExecutedSimulationId = null;
+            _lastExecutedEdgeSettings = new Dictionary<string, object?>();
+        }
     }
 
     private string EnsureSimulationId(Simulation simulation)
