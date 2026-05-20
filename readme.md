@@ -104,6 +104,7 @@ python3 -m pip install --upgrade pip
 python3 -m pip install pythonfmu requests requests_cache pandas
 pythonfmu --version
 
+pip install pytz
 make clean all
 cp NordPool.fmu ..
 ```
