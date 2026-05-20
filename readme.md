@@ -10,7 +10,7 @@ This project contains Functional Mock-up Units (FMUs) for the SmartNode implemen
 
 > **⚠️ IMPORTANT:** To compile and run this project properly, you **MUST** either use Windows Subsystem for Linux (WSL) or use macOS. Since the `.NET` application runs in a Linux environment, you **must** install the native Linux version of OpenModelica (`omc`) directly inside WSL. Even if OpenModelica is installed on Windows, it will not work because the system requires the generation of Linux `.so` binaries for the FMUs.
 
-
+> Link to video of backend running "https://hvl.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=72e66b46-803c-4d11-a2ac-b45000925af3"
 
 ### OpenModelica (OMC) Setup in WSL
 
