@@ -42,7 +42,6 @@ python -m pip install --upgrade pip
 python -m pip install pythonfmu requests requests_cache pandas
 pythonfmu --version
 
-cd Nordpool-FMU
 make clean all
 cp NordPool.fmu ..
 ```
