@@ -5,8 +5,12 @@
 This project contains Functional Mock-up Units (FMUs) for the SmartNode implementation, including NordPool, Fakepool, and Yr-Weather integrations.
 
 ## Prerequisites
+> **⚠️ KNOWN ISSUE (`roomM370.so` or `Femyou` missing errors):** 
+> If you encounter an error stating that `roomM370.so` does not exist or that Femyou files are missing/broken, this is often due to authentication or cloning issues when downloading the project (e.g., using GitHub Desktop, CLI, or downloading as a ZIP file, which can skip or break the Femyou git submodules). The maintainers behind Femyou have been notified of this issue. Ensure the repository is fully cloned with its submodules, and then follow the OMC setup steps below to correctly compile the FMU binaries.
 
 > **⚠️ IMPORTANT:** To compile and run this project properly, you **MUST** either use Windows Subsystem for Linux (WSL) or use macOS. Since the `.NET` application runs in a Linux environment, you **must** install the native Linux version of OpenModelica (`omc`) directly inside WSL. Even if OpenModelica is installed on Windows, it will not work because the system requires the generation of Linux `.so` binaries for the FMUs.
+
+
 
 ### OpenModelica (OMC) Setup in WSL
 
