@@ -6,7 +6,55 @@ This project contains Functional Mock-up Units (FMUs) for the SmartNode implemen
 
 ## Prerequisites
 
-### Windows Setup
+> **⚠️ IMPORTANT:** To compile and run this project properly, you **MUST** either use Windows Subsystem for Linux (WSL) or use macOS. Since the `.NET` application runs in a Linux environment, you **must** install the native Linux version of OpenModelica (`omc`) directly inside WSL. Even if OpenModelica is installed on Windows, it will not work because the system requires the generation of Linux `.so` binaries for the FMUs.
+
+### OpenModelica (OMC) Setup in WSL
+
+Run the following commands in your WSL terminal to install OpenModelica (these commands assume an Ubuntu 24.04 "noble" distribution):
+
+```bash
+# 1. Install required dependencies
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl gnupg
+
+# 2. Add the OpenModelica GPG key
+sudo curl -fsSL http://build.openmodelica.org/apt/openmodelica.asc | sudo gpg --dearmor -o /usr/share/keyrings/openmodelica-keyring.gpg
+
+# 3. Add the OpenModelica APT repository 
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/openmodelica-keyring.gpg] https://build.openmodelica.org/apt noble release" | sudo tee /etc/apt/sources.list.d/openmodelica.list
+
+# 4. Update package lists and install omc (OpenModelica)
+sudo apt-get update
+sudo apt-get install -y openmodelica
+```
+
+Once installed, build the OMC FMUs so your `.NET` code can use them by executing:
+
+```bash
+cd SmartNode/Implementations/FMUs/Source && make clean all && cp roomM370.fmu au_incubator.fmu ..
+```
+
+### OpenModelica (OMC) Setup on macOS
+
+If you are running this project natively on a Mac, your `.NET` code will require the FMUs to be compiled with macOS native binaries (`.dylib`). OpenModelica must be installed on your Mac.
+
+Using [Homebrew](https://brew.sh/), you can install OpenModelica:
+
+```bash
+# Tap the openmodelica repository
+brew tap openmodelica/openmodelica
+
+# Install OpenModelica
+brew install openmodelica
+```
+
+Once installed, build the OMC FMUs by running the same make command in your terminal:
+
+```bash
+cd SmartNode/Implementations/FMUs/Source && make clean all && cp roomM370.fmu au_incubator.fmu ..
+```
+
+### Windows & .NET 8.0 Setup
 
 - **Windows Subsystem for Linux (WSL)** is required
 - Ensure WSL is installed and configured on your system
@@ -19,14 +67,15 @@ sudo apt update
 sudo apt install -y dotnet-sdk-8.0
 ```
 
-## Building FMUs on Windows
+## Building Python FMUs Manually (Windows WSL & macOS)
 
 If the VS Code **Run Task -> Build all Python FMUs** and **(Re)Build all OMC FMUs** fail, follow the manual setup steps below.
 
 ### Step 1: NordPool FMU
 
-Navigate to the NordPool-FMU directory and set up the Python environment:
+Navigate to the NordPool-FMU directory and set up the Python environment.
 
+**For Windows (WSL):**
 ```bash
 # Example path: cd /mnt/c/Users/<windows_username>/ruleless-digital-twins/SmartNode/Implementations/FMUs/Nordpool-FMU
 
@@ -37,9 +86,22 @@ sudo apt install -y python3-venv python3-pip
 
 python3 -m venv .venv
 source .venv/bin/activate
+```
 
-python -m pip install --upgrade pip
-python -m pip install pythonfmu requests requests_cache pandas
+**For macOS:**
+```bash
+# Mac does not use 'apt' or require 'sudo' for managing native Python environments
+cd SmartNode/Implementations/FMUs/Nordpool-FMU
+
+# Setup virtual environment natively
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+**For both platforms (run inside the activated virtual environment):**
+```bash
+python3 -m pip install --upgrade pip
+python3 -m pip install pythonfmu requests requests_cache pandas
 pythonfmu --version
 
 make clean all
@@ -71,6 +133,7 @@ To run the SmartNode control loop coordinator locally on Windows, ensure you hav
 
 ```bash 
 dotnet run 
+```
 ```
 ⚠️ Note that it will use `smartnode/smartnode/Properties/appsettings.json` as the configuration file, so make sure to update any changeable settings in that file as needed before running the command.
 
